@@ -1,0 +1,7 @@
+__pycache__/
+
+dataset/*
+!dataset/.gitkeep
+
+binder_classification/logs/
+scFv_optimization/logs/

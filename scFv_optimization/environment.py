@@ -1,10 +1,8 @@
-import os
 import config
 import torch as T
 import torch.nn.functional as F
 
 from antiberty import AntiBERTyRunner
-from binder_classification.train import train
 from binder_classification.classifier import BinderClassifier
 
 DEVICE = T.device("cuda:0") if T.cuda.is_available() else T.device("cpu")
@@ -32,11 +30,9 @@ class Environment:
 
     def _load_binder_classifier(self) -> None:
 
-        save_path = os.path.join("./binder_classification", "logs", "model.pt")
+        model_path = config.BINDER_MODEL_PATH
 
-        if not os.path.exists(save_path): train()
-
-        self.binder_classifier = BinderClassifier(save_path)
+        self.binder_classifier = BinderClassifier(str(model_path))
         self.binder_classifier.load_model()
 
     def _get_one_hot_encoding(self, seqs: list[str]) -> T.Tensor:

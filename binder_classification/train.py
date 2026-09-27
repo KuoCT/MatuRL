@@ -1,4 +1,4 @@
-import os
+import config
 import torch as T
 import numpy as np
 
@@ -17,7 +17,8 @@ def train(batch_size: int = 128) -> None:
     set_seeds()
     create_train_valid_sets()
 
-    model = BinderClassifier(os.path.join("./binder_classification", "logs", "model.pt"))
+    config.BINDER_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    model = BinderClassifier(str(config.BINDER_MODEL_PATH))
 
     best_valid_metrics = {"acc": 0, "rec": 0, "spe": 0, "pre": 0,
                           "f1s": 0, "mcc": 0, "auc": 0}

@@ -20,30 +20,47 @@ def set_seeds() -> None:
         T.backends.cudnn.deterministic = True
         T.backends.cudnn.benchmark = False
 
-def get_save_dir() -> str:
+# def get_save_dir() -> str:
 
-    today = datetime.today().strftime("%Y-%m-%d")
-    logs_dir = os.path.join("./scFv_optimization", "logs")
-    os.makedirs(logs_dir, exist_ok=True)
+#     today = datetime.today().strftime("%Y-%m-%d")
+#     logs_dir = os.path.join("./scFv_optimization", "logs")
+#     os.makedirs(logs_dir, exist_ok=True)
 
-    prefix = f"{today}-"
-    existing = [d for d in os.listdir(logs_dir)
-        if os.path.isdir(os.path.join(logs_dir, d)) and d.startswith(prefix)]
+#     prefix = f"{today}-"
+#     existing = [d for d in os.listdir(logs_dir)
+#         if os.path.isdir(os.path.join(logs_dir, d)) and d.startswith(prefix)]
 
-    nums = [int(d.split("-")[-1]) for d in existing 
-            if d.split("-")[-1].isdigit()]
-    next_num = max(nums, default=0) + 1
+#     nums = [int(d.split("-")[-1]) for d in existing 
+#             if d.split("-")[-1].isdigit()]
+#     next_num = max(nums, default=0) + 1
 
-    dir_name = f"{today}-{next_num:02d}"
-    save_dir = os.path.join(logs_dir, dir_name)
-    os.makedirs(save_dir, exist_ok=True)
-    return save_dir
+#     dir_name = f"{today}-{next_num:02d}"
+#     save_dir = os.path.join(logs_dir, dir_name)
+#     os.makedirs(save_dir, exist_ok=True)
+#     return save_dir
 
-def save_config(module: types.ModuleType, save_dir: str):
+def save_config(module: types.ModuleType, save_dir: str | os.PathLike) -> None:
 
-    config_dict = {k: v for k, v in vars(module).items() 
-                   if not k.startswith("__") and not callable(v)}
-    
-    with open(os.path.join(save_dir, "config.json"), "w", encoding="utf-8") as f:
-        json.dump(config_dict, f, indent=4, ensure_ascii=False)
+    config_dict = {
+        k: v
+        for k, v in vars(module).items()
+        if k.isupper() and k != "JOB"
+    }
+
+    config_dict = {
+        k: str(v) if isinstance(v, os.PathLike) else v
+        for k, v in config_dict.items()
+    }
+
+    with open(
+        os.path.join(save_dir, "config.json"),
+        "w",
+        encoding="utf-8"
+    ) as f:
+        json.dump(
+            config_dict,
+            f,
+            indent=4,
+            ensure_ascii=False
+        )
 

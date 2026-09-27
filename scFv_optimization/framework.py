@@ -15,8 +15,7 @@ class Framework:
     def __init__(self) -> None:
         
         set_seeds()
-        self.save_dir = get_save_dir()
-        save_config(config, self.save_dir)
+        self.save_dir = config.OUTPUT_DIR
 
         self.env = Environment()
 

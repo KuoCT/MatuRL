@@ -1,6 +1,7 @@
 import argparse
 import config
 import shutil
+from contextlib import contextmanager
 from time import perf_counter
 
 
@@ -10,50 +11,56 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def format_duration(seconds: float) -> str:
+    days, remainder = divmod(round(seconds), 24 * 60 * 60)
+    hours, remainder = divmod(remainder, 60 * 60)
+    minutes, seconds = divmod(remainder, 60)
+
+    if days:
+        return f"{days}-{hours:02d}:{minutes:02d}:{seconds:02d}"
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
+
+
+@contextmanager
+def print_timing(label: str):
+    start = perf_counter()
+    try:
+        yield
+    finally:
+        print(f"[Timing] {label}: {format_duration(perf_counter() - start)}")
+
+
 def main() -> None:
-    total_start = perf_counter()
+    with print_timing("Total"):
+        with print_timing("Job setup"):
+            config.configure(parse_args().job)
+            print(f"\nExperiment: {config.JOB_NAME}\n")
 
-    setup_start = perf_counter()
-    args = parse_args()
-    config.configure(args.job)
+            # Each job owns one immutable output directory.
+            config.OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
+            shutil.copy2(config.JOB_PATH, config.OUTPUT_DIR / "job.json")
 
-    # Each job owns one immutable output directory.
-    config.OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
-    shutil.copy2(config.JOB_PATH, config.OUTPUT_DIR / "job.json")
-    from scFv_optimization._utils import save_config
-    save_config(config, config.OUTPUT_DIR)
+            from scFv_optimization._utils import save_config
+            save_config(config, config.OUTPUT_DIR)
 
-    print(f"[Timing] Job setup: {perf_counter() - setup_start:.2f} s")
+        model_exists = config.BINDER_MODEL_PATH.exists()
+        binder_action = "reused" if model_exists else "trained"
+        with print_timing(f"Binder classifier ({binder_action})"):
+            if not model_exists:
+                from binder_classification.train import train
+                train()
 
-    binder_start = perf_counter()
-    binder_action = "reused"
-    if not config.BINDER_MODEL_PATH.exists():
-        from binder_classification.train import train
-        train()
-        binder_action = "trained"
+        if config.RUN_RL:
+            with print_timing("Framework initialization"):
+                from scFv_optimization.framework import Framework
+                framework = Framework()
 
-    print(
-        f"[Timing] Binder classifier ({binder_action}): "
-        f"{perf_counter() - binder_start:.2f} s"
-    )
+            with print_timing("RL training"):
+                framework.train()
 
-    if not config.RUN_RL:
-        print(f"[Timing] Total: {perf_counter() - total_start:.2f} s")
-        return
-
-    framework_start = perf_counter()
-    from scFv_optimization.framework import Framework
-
-    framework = Framework()
-    print(
-        f"[Timing] Framework initialization: "
-        f"{perf_counter() - framework_start:.2f} s"
-    )
-
-    training_start = perf_counter()
-    framework.train()
-    print(f"[Timing] RL training: {perf_counter() - training_start:.2f} s")
-    print(f"[Timing] Total: {perf_counter() - total_start:.2f} s")
+    print(f"\nCompleted: {config.JOB_NAME}\n")
 
 
 if __name__ == "__main__":

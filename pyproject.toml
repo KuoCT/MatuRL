@@ -15,6 +15,9 @@ dependencies = [
 cpu = [
     "torch>=2.7",
 ]
+mps = [
+    "torch>=2.7",
+]
 cu126 = [
     "torch>=2.7",
 ]
@@ -48,6 +51,7 @@ explicit = true
 conflicts = [
     [
         { extra = "cpu" },
+        { extra = "mps" },
         { extra = "cu126" },
         { extra = "cu128" },
     ],

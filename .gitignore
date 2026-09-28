@@ -18,3 +18,4 @@ run*
 job/*.json
 !job_example.json
 NOTE*
+scripts/

@@ -2,6 +2,7 @@ import config
 import torch as T
 import numpy as np
 
+from device import DEVICE
 from binder_classification._utils import set_seeds
 from binder_classification.dataset import create_train_valid_sets
 from binder_classification.dataset import get_train_batches, get_valid_batches
@@ -9,8 +10,6 @@ from binder_classification.classifier import BinderClassifier
 
 from sklearn.metrics import accuracy_score, recall_score, confusion_matrix, precision_score
 from sklearn.metrics import f1_score, matthews_corrcoef, roc_auc_score
-
-DEVICE = T.device("cuda:0") if T.cuda.is_available() else T.device("cpu")
 
 def train(batch_size: int = 128) -> None:
 
@@ -23,7 +22,7 @@ def train(batch_size: int = 128) -> None:
     best_valid_metrics = {"acc": 0, "rec": 0, "spe": 0, "pre": 0,
                           "f1s": 0, "mcc": 0, "auc": 0}
 
-    print("\nStart training binder classifier ...")
+    print("Start training binder classifier ...")
 
     early_stop_count, patient = 0, 10
     for epoch in range(1, 101):
@@ -46,15 +45,21 @@ def train(batch_size: int = 128) -> None:
         
         valid_metrics = valid(model, batch_size)
 
-        if (valid_metrics["mcc"] >= best_valid_metrics["mcc"]) and \
-           (valid_metrics["auc"] >= best_valid_metrics["auc"]):
-            
-            print(f"epoch: [{epoch:003d}] | "
-                  f"valid_acc: {valid_metrics['acc']:.4f} | valid_rec: {valid_metrics['rec']:.4f} | "
-                  f"valid_spe: {valid_metrics['spe']:.4f} | valid_pre: {valid_metrics['pre']:.4f} | "
-                  f"valid_f1s: {valid_metrics['f1s']:.4f} | valid_mcc: {valid_metrics['mcc']:.4f} | "
-                  f"valid_auc: {valid_metrics['auc']:.4f}")
-            
+        is_progress = (
+            valid_metrics["mcc"] >= best_valid_metrics["mcc"]
+            and valid_metrics["auc"] >= best_valid_metrics["auc"]
+        )
+        progress_label = "[Progress]" if is_progress else ""
+
+        print(
+            f"Epoch: {epoch:03d} {progress_label:<10} Validate: "
+            f"ACC={valid_metrics['acc']:.4f} | REC={valid_metrics['rec']:.4f} | "
+            f"SPE={valid_metrics['spe']:.4f} | PRE={valid_metrics['pre']:.4f} | "
+            f"F1S={valid_metrics['f1s']:.4f} | MCC={valid_metrics['mcc']:.4f} | "
+            f"AUC={valid_metrics['auc']:.4f}"
+        )
+
+        if is_progress:
             best_valid_metrics = valid_metrics
             early_stop_count = 0
             model.save_model()
@@ -62,7 +67,7 @@ def train(batch_size: int = 128) -> None:
         else:
             early_stop_count += 1
             if early_stop_count == patient:
-                print(f"\nEarly stopping at epoch {epoch:003d}.")
+                print(f"Early stopping at epoch {epoch:003d}.")
                 break
 
 def valid(model: BinderClassifier, batch_size: int = 128) -> dict[str, float]:

@@ -5,11 +5,12 @@ import torch as T
 import pandas as pd
 
 from antiberty import AntiBERTyRunner
+from device import DEVICE
 from torch.nn.utils.rnn import pad_sequence
 from sklearn.model_selection import train_test_split
 
 
-ANTIBERTY = AntiBERTyRunner()
+ANTIBERTY = AntiBERTyRunner(device=DEVICE)
 
 
 def create_train_valid_sets(test_size: int = 0.2) -> None:

@@ -2,11 +2,10 @@ import os
 import config
 import torch as T
 
+from device import DEVICE
 from scFv_optimization.buffer import ReplayBuffer
 from torch.distributions.categorical import Categorical
 from scFv_optimization.actors_critic import Actor1, Actor2, Critic
-
-DEVICE = T.device("cuda:0") if T.cuda.is_available() else T.device("cpu")
 
 class PPO:
 

@@ -2,7 +2,7 @@ import torch as T
 import torch.nn as nn
 import torch.optim as optim
 
-DEVICE = T.device("cuda:0") if T.cuda.is_available() else T.device("cpu")
+from device import DEVICE
 
 class BinderClassifier(nn.Module):
 

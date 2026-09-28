@@ -3,9 +3,8 @@ import torch as T
 import torch.nn.functional as F
 
 from antiberty import AntiBERTyRunner
+from device import DEVICE
 from binder_classification.classifier import BinderClassifier
-
-DEVICE = T.device("cuda:0") if T.cuda.is_available() else T.device("cpu")
 
 class Environment:
 
@@ -15,7 +14,7 @@ class Environment:
         self.a2_to_aa = {idx: aa for idx, aa in enumerate(self.amino_acids)}
         self.aa_to_a2 = {aa: idx for idx, aa in enumerate(self.amino_acids)}
 
-        self.antiberty = AntiBERTyRunner()
+        self.antiberty = AntiBERTyRunner(device=DEVICE)
         self._load_binder_classifier()
 
         self.scFvs_1 = [config.TARGET_V_LC + config.TARGET_LINK + config.TARGET_V_RC] * config.N_PARALLELS

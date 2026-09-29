@@ -471,6 +471,14 @@ def plot_bind_prob_curve(
 def main() -> None:
     args = parse_args()
 
+    evaluation_dir = Path("evaluate") / args.name
+    evaluation_completed = evaluation_dir / ".completed"
+    if evaluation_completed.exists():
+        print(f"\nSkipped completed evaluation: {args.name}\n")
+        return
+
+    print(f"\nEvaluation: {args.name}\n")
+
     run_dirs = [Path(path) for path in args.runs]
     plot_types = set(args.plots)
 
@@ -536,7 +544,6 @@ def main() -> None:
 
             model_paths.append(model_path)
 
-    evaluation_dir = Path("evaluate") / args.name
     evaluation_dir.mkdir(parents=True, exist_ok=False)
 
     if "opti" in plot_types:
@@ -568,6 +575,9 @@ def main() -> None:
             subtitle="ROC Analysis Across Datasets",
             legend_loc="lower right",
         )
+
+    evaluation_completed.touch()
+    print(f"\nCompleted evaluation: {args.name}\n")
 
 
 if __name__ == "__main__":

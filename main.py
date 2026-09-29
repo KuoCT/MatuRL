@@ -3,6 +3,8 @@ import config
 import shutil
 from contextlib import contextmanager
 from time import perf_counter
+import os
+import torch as T
 
 
 def parse_args() -> argparse.Namespace:
@@ -23,6 +25,16 @@ def format_duration(seconds: float) -> str:
     return f"{minutes:02d}:{seconds:02d}"
 
 
+def configure_cpu_threads() -> None:
+    value = os.getenv("MATURL_NUM_THREADS")
+    if value is None:
+        return
+
+    num_threads = int(value)
+    T.set_num_threads(num_threads)
+    T.set_num_interop_threads(1)
+
+
 @contextmanager
 def print_timing(label: str):
     start = perf_counter()
@@ -33,10 +45,16 @@ def print_timing(label: str):
 
 
 def main() -> None:
+    configure_cpu_threads()
     with print_timing("Total"):
         with print_timing("Job setup"):
             config.configure(parse_args().job)
             print(f"\nExperiment: {config.JOB_NAME}\n")
+
+            job_completed = config.OUTPUT_DIR / ".completed"
+            if job_completed.exists():
+                print(f"Skipped completed job: {config.JOB_NAME}")
+                return
 
             # Each job owns one immutable output directory.
             config.OUTPUT_DIR.mkdir(parents=True, exist_ok=False)
@@ -45,12 +63,14 @@ def main() -> None:
             from scFv_optimization._utils import save_config
             save_config(config, config.OUTPUT_DIR)
 
-        model_exists = config.BINDER_MODEL_PATH.exists()
+        binder_completed = config.BINDER_MODEL_PATH.with_name(config.BINDER_MODEL_PATH.name + ".completed")
+        model_exists = (config.BINDER_MODEL_PATH.exists() and binder_completed.exists())
         binder_action = "reused" if model_exists else "trained"
         with print_timing(f"Binder classifier ({binder_action})"):
             if not model_exists:
                 from binder_classification.train import train
                 train()
+                binder_completed.touch()
 
         if config.RUN_RL:
             with print_timing("Framework initialization"):
@@ -60,6 +80,8 @@ def main() -> None:
             with print_timing("RL training"):
                 framework.train()
 
+    # Only mark the job completed after every step succeeds.
+    job_completed.touch()
     print(f"\nCompleted: {config.JOB_NAME}\n")
 
 
